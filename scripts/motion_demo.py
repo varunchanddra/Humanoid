@@ -12,8 +12,6 @@ from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 from control_msgs.msg import PointHeadAction, PointHeadGoal
 
 
-
-
 class BaseMovements:
 
     def __init__(self):
@@ -102,7 +100,7 @@ class ArmMovements():
         self.joint_names = ["shoulder_pan_joint", "shoulder_lift_joint", "upperarm_roll_joint",
               "elbow_flex_joint", "forearm_roll_joint", "wrist_flex_joint", "wrist_roll_joint"]
         self.joint_positions = [0, 0, 0, 0, 0, 0, 0]
-        self.client = actionlib.SimpleActionClient("torso_controller/follow_joint_trajectory", FollowJointTrajectoryAction)
+        self.client = actionlib.SimpleActionClient("arm_controller/follow_joint_trajectory", FollowJointTrajectoryAction)
         rospy.loginfo("Waiting for arm_controller...")
         self.client.wait_for_server()
         rospy.loginfo("Connected to arm_controller")
@@ -116,7 +114,7 @@ class ArmMovements():
         traj.points[0].positions = self.joint_positions
         traj.points[0].velocities = [0.0] * len(self.joint_positions)
         traj.points[0].accelerations = [0.0] * len(self.joint_positions)
-        traj.points[0].time_from_start = rospy.Duration(5.0)
+        traj.points[0].time_from_start = rospy.Duration(9.0)
 
         head_goal = FollowJointTrajectoryGoal()
         head_goal.trajectory = traj
@@ -125,13 +123,30 @@ class ArmMovements():
         self.client.send_goal(head_goal)
         self.client.wait_for_result(rospy.Duration(9.0))
 
+class GripMovements():
+
+    def __init__(self):
+        
+        self.client = actionlib.SimpleActionClient("gripper_controller/gripper_action", GripperCommandAction)
+        self.client.wait_for_server()
+
+    def move(self, position, effort, duration = 5.0):
+        
+        gripper_goal = GripperCommandGoal()
+        gripper_goal.command.max_effort = effort
+        gripper_goal.command.position = position
+        
+        self.client.send_goal(gripper_goal)
+        self.client.wait_for_result(rospy.Duration(5.0))
+        
+
 
 
 if __name__ == "__main__":
     
     rospy.init_node("motion_demo")
-#    task = WholeMovements()
-#    task.move_forward( 1.5, 0.2 )
+    task = BaseMovements()
+    task.move( 1.5, 0.2 )
    
     head = HeadMovements()
     head.move( [0, pi/4.0])    #looks down 45 
@@ -144,5 +159,8 @@ if __name__ == "__main__":
     torso.move(3.0)
     
     arm = ArmMovements()
-    #arm.move([1, 1, 1, 1, 1, 1, 1])
-    arm.move([1.32, 0.7, 0.0, -2.0, 0.0, -0.57, 0.0])
+    arm.move([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+    grip = GripMovements()
+    grip.move(0.0, 10.0)
+    grip.move(1.0, 10.0)
